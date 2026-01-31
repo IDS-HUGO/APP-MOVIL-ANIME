@@ -11,9 +11,9 @@ import kotlinx.coroutines.launch
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class AnimeViewModel : ViewModel() {
+class SearchViewModel : ViewModel() {
 
-    var animes by mutableStateOf<List<Anime>>(emptyList())
+    var searchResults by mutableStateOf<List<Anime>>(emptyList())
         private set
 
     var isLoading by mutableStateOf(false)
@@ -22,7 +22,6 @@ class AnimeViewModel : ViewModel() {
     var error by mutableStateOf<String?>(null)
         private set
 
-    // Instancia de Retrofit
     private val retrofit by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.jikan.moe/v4/")
@@ -34,35 +33,35 @@ class AnimeViewModel : ViewModel() {
         retrofit.create(AnimeApi::class.java)
     }
 
-    init {
-        cargarAnimes()
-    }
+    fun buscarAnimes(query: String) {
+        if (query.isBlank()) {
+            searchResults = emptyList()
+            error = null
+            return
+        }
 
-    private fun cargarAnimes() {
         viewModelScope.launch {
             isLoading = true
             error = null
             try {
                 val response = animeApi.getAnimes()
-                val animesList = response.data.map { animeData ->
-                    Anime(
-                        id = animeData.malId,
-                        title = animeData.title,
-                        imageUrl = animeData.images.jpg.imageUrl,
-                        synopsis = animeData.synopsis ?: ""
-                    )
-                }
-                animes = animesList
+                val animesList = response.data
+                    .filter { it.title.contains(query, ignoreCase = true) }
+                    .map { animeData ->
+                        Anime(
+                            id = animeData.malId,
+                            title = animeData.title,
+                            imageUrl = animeData.images.jpg.imageUrl,
+                            synopsis = animeData.synopsis ?: ""
+                        )
+                    }
+                searchResults = animesList
             } catch (e: Exception) {
-                error = "Error: ${e.message}"
+                error = "Error en la búsqueda: ${e.message}"
+                searchResults = emptyList()
             } finally {
                 isLoading = false
             }
         }
     }
-
-    fun reintentar() {
-        cargarAnimes()
-    }
 }
-

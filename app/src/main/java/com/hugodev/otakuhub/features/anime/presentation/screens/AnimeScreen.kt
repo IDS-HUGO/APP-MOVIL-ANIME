@@ -1,7 +1,9 @@
 package com.hugodev.otakuhub.features.anime.presentation.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,10 +22,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.hugodev.otakuhub.features.anime.presentation.components.AnimeItem
 import com.hugodev.otakuhub.features.anime.presentation.viewmodels.AnimeViewModel
 import com.hugodev.otakuhub.features.anime.presentation.viewmodels.AnimeViewModelFactory
@@ -31,11 +33,15 @@ import com.hugodev.otakuhub.features.anime.presentation.viewmodels.AnimeViewMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimeScreen(
+    navController: NavController? = null,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
     viewModel: AnimeViewModel = viewModel(
-        factory = AnimeViewModelFactory(LocalContext.current.applicationContext)
+        factory = AnimeViewModelFactory()
     )
 ) {
-    val state = viewModel.animeState
+    val animes = viewModel.animes
+    val isLoading = viewModel.isLoading
+    val error = viewModel.error
 
     Scaffold(
         topBar = {
@@ -57,9 +63,10 @@ fun AnimeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .padding(contentPadding)
         ) {
             when {
-                state.isLoading -> {
+                isLoading -> {
                     // Estado de carga
                     Column(
                         modifier = Modifier.align(Alignment.Center),
@@ -77,7 +84,7 @@ fun AnimeScreen(
                     }
                 }
 
-                state.error != null -> {
+                error != null -> {
                     // Estado de error
                     Column(
                         modifier = Modifier
@@ -92,21 +99,21 @@ fun AnimeScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = state.error,
+                            text = error,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = { viewModel.retry() }
+                            onClick = { viewModel.reintentar() }
                         ) {
                             Text(text = "Reintentar")
                         }
                     }
                 }
 
-                state.animes.isEmpty() -> {
+                animes.isEmpty() -> {
                     // Estado vacío
                     Text(
                         text = "No hay animes disponibles",
@@ -126,10 +133,15 @@ fun AnimeScreen(
                         }
 
                         items(
-                            items = state.animes,
+                            items = animes,
                             key = { anime -> anime.id }
                         ) { anime ->
-                            AnimeItem(anime = anime)
+                            AnimeItem(
+                                anime = anime,
+                                modifier = Modifier.clickable {
+                                    navController?.navigate("detail/${anime.id}")
+                                }
+                            )
                         }
 
                         item {
@@ -141,3 +153,4 @@ fun AnimeScreen(
         }
     }
 }
+
